@@ -4,37 +4,37 @@
 
 ### Scope
 
-- [x] Build a simple personal finance tracker app to log expenses and income, view balance, and
+- ✅ Build a simple personal finance tracker app to log expenses and income, view balance, and
   categorize transactions.
 
 ### Core Functionality
 
-- [x] Add transactions (income or expense) with amount, category, date, and optional notes.
-- [x] Display a list of all transactions.
-- [x] Show current balance at the top of the screen.
-- [x] Filter transactions by type (income, expense, all).
-- [x] Persist data locally so it survives app restarts.
+- ✅ Add transactions (income or expense) with amount, category, date, and optional notes.
+- ✅ Display a list of all transactions.
+- ✅ Show current balance at the top of the screen.
+- ✅ Filter transactions by type (income, expense, all).
+- ✅ Persist data locally so it survives app restarts.
 
 ### Technical Requirements
 
-- [x] Use Bloc for state management (transactions list, balance calculation, filters).
-- [x] Implement theming with light and dark mode toggle, with persisted preference.
-- [x] Use SharedPreferences for theme preference.
-- [x] Use a database like SQLite or a persistence framework like Hive for transaction storage.
-- [x] Follow Flutter best practices and Material Design guidelines.
+- ✅ Use Bloc for state management (transactions list, balance calculation, filters).
+- ✅ Implement theming with light and dark mode toggle, with persisted preference.
+- ✅ Use SharedPreferences for theme preference.
+- ✅ Use a database like SQLite or a persistence framework like Hive for transaction storage.
+- ✅ Follow Flutter best practices and Material Design guidelines.
 
 ### Deliverables
 
-- [x] Repository (private or public) with a clear README explaining architecture decisions,
+- ✅ Repository (private or public) with a clear README explaining architecture decisions,
   trade-offs or shortcuts, and what you would improve with more time.
 
 ### Bonus (Optional)
 
-- [x] Unit tests for Bloc logic.
-- [x] Form validation.
-- [x] Transaction editing and deletion.
-- [x] Date range filtering.
-- [x] Simple charts showing spending by category.
+- ✅ Unit tests for Bloc logic.
+- ✅ Form validation.
+- ✅ Transaction editing and deletion.
+- ✅ Date range filtering.
+- ✅ Simple charts showing spending by category.
 
 ### Extra Features (Beyond Requirements)
 
