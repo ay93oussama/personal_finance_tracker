@@ -1,5 +1,13 @@
 # Personal Finance Tracker App
 
+## 📸 App Screenshots
+
+<p float="left">
+  <img src="home_empty_state.png" width="260" alt="Empty state"/>
+  <img src="home.png" width="260" alt="Home with transactions"/>
+  <img src="add_edit_transaction.png" width="260" alt="Add transaction"/>
+</p>
+
 ## Take-Home Requirements
 
 ### Scope
