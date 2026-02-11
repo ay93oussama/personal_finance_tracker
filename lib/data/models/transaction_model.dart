@@ -1,51 +1,41 @@
-import 'package:equatable/equatable.dart';
 import 'package:hive/hive.dart';
 
-enum TransactionType { income, expense }
+import '../../domain/entities/transaction.dart';
 
-enum TransactionFilter { all, income, expense }
-
-class TransactionModel extends Equatable {
+class TransactionModel extends Transaction {
   const TransactionModel({
-    required this.id,
-    required this.type,
-    required this.amount,
-    required this.title,
-    required this.category,
-    required this.date,
-    this.note,
+    required super.id,
+    required super.type,
+    required super.amount,
+    required super.title,
+    required super.category,
+    required super.date,
+    super.note,
   });
 
-  final String id;
-  final TransactionType type;
-  final double amount;
-  final String title;
-  final String category;
-  final DateTime date;
-  final String? note;
-
-  TransactionModel copyWith({
-    String? id,
-    TransactionType? type,
-    double? amount,
-    String? title,
-    String? category,
-    DateTime? date,
-    String? note,
-  }) {
+  factory TransactionModel.fromEntity(Transaction transaction) {
     return TransactionModel(
-      id: id ?? this.id,
-      type: type ?? this.type,
-      amount: amount ?? this.amount,
-      title: title ?? this.title,
-      category: category ?? this.category,
-      date: date ?? this.date,
-      note: note ?? this.note,
+      id: transaction.id,
+      type: transaction.type,
+      amount: transaction.amount,
+      title: transaction.title,
+      category: transaction.category,
+      date: transaction.date,
+      note: transaction.note,
     );
   }
 
-  @override
-  List<Object?> get props => [id, type, amount, title, category, date, note];
+  Transaction toEntity() {
+    return Transaction(
+      id: id,
+      type: type,
+      amount: amount,
+      title: title,
+      category: category,
+      date: date,
+      note: note,
+    );
+  }
 }
 
 class TransactionTypeAdapter extends TypeAdapter<TransactionType> {
@@ -91,8 +81,7 @@ class TransactionModelAdapter extends TypeAdapter<TransactionModel> {
     final date = DateTime.fromMillisecondsSinceEpoch(reader.readInt());
     final hasNote = reader.readBool();
     final note = hasNote ? reader.readString() : null;
-    final title =
-        reader.availableBytes > 0 ? reader.readString() : category;
+    final title = reader.availableBytes > 0 ? reader.readString() : category;
     return TransactionModel(
       id: id,
       type: type,

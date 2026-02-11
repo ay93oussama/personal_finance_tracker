@@ -52,15 +52,45 @@
 - Category picker with search (bottom sheet) when adding/editing a transaction.
 - Transactions grouped by date in the list.
 - Swipe-to-delete on transactions (Dismissible).
+- App localization for English and German with a language toggle button in the Home AppBar (persisted preference).
 
 
 ### Architecture Decisions
 
-- State management uses two Cubits: `TransactionsCubit` for data/filter/balance and `ThemeCubit` for
-  theme mode.
-- Persistence uses Hive with a repository abstraction (`TransactionRepository`) to keep data access
-  separate from UI.
-- UI is split into screens and widgets (`HomePage`, `AddEditTransactionPage`, `TransactionTile`).
+- State management uses two Cubits: `TransactionsCubit` for transactions/filter/balance and
+  `ThemeCubit` for theme mode.
+- Data access is separated behind a domain repository contract, with a local Hive data source in
+  the data layer.
+- Repository and use cases return `Either<Failure, T>` using `dartz` for explicit success/failure
+  handling.
+- Domain entities/use cases stay independent from UI and storage details.
+
+### Clean Architecture Structure
+
+```text
+lib/
+  core/
+    constants/
+    errors/
+    helpers/
+    router/
+    services/
+    theme/
+    usecases/
+  data/
+    data_sources/local/
+    models/
+    repositories/
+  domain/
+    entities/
+    repositories/
+    usecases/
+  presentation/
+    states/cubits/
+    views/
+    widgets/
+  main.dart
+```
 
 ### Trade-offs / Shortcuts
 
@@ -77,7 +107,7 @@
 - Enhanced Charting: Show detailed trends over time, including weekly, monthly, and yearly
   breakdowns with interactive charts.
 - Category & Currency Management: Allow users to create and customize categories, and support
-  multiple currencies with proper formatting and localization.
+  multiple currencies with proper formatting.
 - Transaction Tags: Enable tagging transactions for easier filtering, grouping, and insights.
 - Search & Filter: Add a search bar and filters to quickly find transactions by name, amount,
   date, or category.

@@ -1,43 +1,48 @@
+import 'package:dartz/dartz.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
-
-import 'package:tracker/bloc/transactions/transactions_cubit.dart';
-import 'package:tracker/bloc/transactions/transactions_state.dart';
-import 'package:tracker/data/models/transaction_model.dart';
-import 'package:tracker/data/repositories/transaction_repository.dart';
+import 'package:tracker/core/errors/failures.dart';
+import 'package:tracker/domain/entities/transaction.dart';
+import 'package:tracker/domain/entities/transaction_filter.dart';
+import 'package:tracker/domain/repositories/transaction_repository.dart';
+import 'package:tracker/presentation/states/cubits/transactions/transactions_cubit.dart';
+import 'package:tracker/presentation/states/cubits/transactions/transactions_state.dart';
 
 class FakeTransactionRepository implements TransactionRepository {
   FakeTransactionRepository(this._items);
 
-  final List<TransactionModel> _items;
+  final List<Transaction> _items;
 
   @override
-  Future<void> add(TransactionModel transaction) async {
+  Future<Either<Failure, Unit>> add(Transaction transaction) async {
     _items.removeWhere((item) => item.id == transaction.id);
     _items.add(transaction);
+    return const Right(unit);
   }
 
   @override
-  Future<void> delete(String id) async {
+  Future<Either<Failure, Unit>> delete(String id) async {
     _items.removeWhere((item) => item.id == id);
+    return const Right(unit);
   }
 
   @override
-  Future<List<TransactionModel>> fetchAll() async {
-    return List<TransactionModel>.from(_items);
+  Future<Either<Failure, List<Transaction>>> fetchAll() async {
+    return Right(List<Transaction>.from(_items));
   }
 
   @override
-  Future<void> update(TransactionModel transaction) async {
+  Future<Either<Failure, Unit>> update(Transaction transaction) async {
     _items.removeWhere((item) => item.id == transaction.id);
     _items.add(transaction);
+    return const Right(unit);
   }
 }
 
 void main() {
   test('load sorts transactions and computes balance', () async {
     final repo = FakeTransactionRepository([
-      TransactionModel(
+      Transaction(
         id: '1',
         type: TransactionType.expense,
         amount: 20,
@@ -45,7 +50,7 @@ void main() {
         category: 'Food',
         date: DateTime(2024, 1, 1),
       ),
-      TransactionModel(
+      Transaction(
         id: '2',
         type: TransactionType.income,
         amount: 100,
@@ -65,7 +70,7 @@ void main() {
 
   test('filters by type and date range', () async {
     final repo = FakeTransactionRepository([
-      TransactionModel(
+      Transaction(
         id: '1',
         type: TransactionType.expense,
         amount: 20,
@@ -73,7 +78,7 @@ void main() {
         category: 'Food',
         date: DateTime(2024, 1, 15),
       ),
-      TransactionModel(
+      Transaction(
         id: '2',
         type: TransactionType.income,
         amount: 100,
@@ -90,10 +95,7 @@ void main() {
     expect(cubit.state.filteredTransactions.length, 1);
 
     cubit.setDateRange(
-      DateTimeRange(
-        start: DateTime(2024, 2, 1),
-        end: DateTime(2024, 2, 2),
-      ),
+      DateTimeRange(start: DateTime(2024, 2, 1), end: DateTime(2024, 2, 2)),
     );
 
     expect(cubit.state.filteredTransactions.isEmpty, true);
@@ -104,7 +106,7 @@ void main() {
     final cubit = TransactionsCubit(repo);
 
     await cubit.addTransaction(
-      TransactionModel(
+      Transaction(
         id: '1',
         type: TransactionType.expense,
         amount: 10,
@@ -116,7 +118,7 @@ void main() {
     expect(cubit.state.transactions.length, 1);
 
     await cubit.updateTransaction(
-      TransactionModel(
+      Transaction(
         id: '1',
         type: TransactionType.expense,
         amount: 15,
