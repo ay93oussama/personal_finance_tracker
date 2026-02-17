@@ -1,0 +1,8 @@
+{
+  "endpoint": "/v1/images/generations",
+  "model": "gpt-image-1.5",
+  "n": 1,
+  "prompt": "Use case: ui-mockup\nPrimary request: A modern personal finance tracker app hero image showing a smartphone with clean income and expense charts, subtle transaction cards, and a calm trustworthy aesthetic\nScene/background: minimal desktop surface with soft abstract financial shapes in background\nSubject: smartphone displaying a polished expense and income dashboard\nStyle/medium: premium product-style UI mockup\nComposition/framing: wide 3:2 composition with generous negative space on the right for headline\nLighting/mood: soft daylight with gentle shadows\nColor palette: teal, slate, and warm neutral accents\nConstraints: no logos, no text, no watermark\nAvoid: cluttered layout, oversaturated colors, exaggerated 3D effects",
+  "quality": "high",
+  "size": "1536x1024"
+}

@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:tracker/core/helpers/app_formatters.dart';
+import 'package:tracker/core/theme/app_tokens.dart';
 import 'package:tracker/domain/entities/transaction.dart';
 
 class TransactionTile extends StatelessWidget {
@@ -14,7 +15,10 @@ class TransactionTile extends StatelessWidget {
     final amountText = AppFormatters.signedCurrency(
       isIncome ? transaction.amount : -transaction.amount,
     );
-    final color = isIncome ? Colors.green : Colors.red;
+    final theme = Theme.of(context);
+    final color = isIncome
+        ? theme.semanticColors.income
+        : theme.semanticColors.expense;
 
     return Card(
       child: ListTile(
@@ -34,7 +38,7 @@ class TransactionTile extends StatelessWidget {
         ),
         trailing: Text(
           amountText,
-          style: Theme.of(context).textTheme.titleMedium?.copyWith(
+          style: theme.textTheme.titleMedium?.copyWith(
             color: color,
             fontWeight: FontWeight.w600,
           ),

@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:tracker/core/helpers/app_formatters.dart';
 import 'package:tracker/core/localization/app_localizations.dart';
 import 'package:tracker/domain/entities/transaction_filter.dart';
+import 'package:tracker/domain/usecases/transactions/transaction_date_range_presets.dart';
 
 class TransactionFiltersRow extends StatelessWidget {
   const TransactionFiltersRow({
@@ -22,55 +23,6 @@ class TransactionFiltersRow extends StatelessWidget {
     DateTime? start = range?.start;
     DateTime? end = range?.end;
 
-    DateTimeRange? safeRange() {
-      if (start == null || end == null) return null;
-      if (start!.isAfter(end!)) {
-        return DateTimeRange(start: end!, end: start!);
-      }
-      return DateTimeRange(start: start!, end: end!);
-    }
-
-    DateTime lastDayOfMonth(int year, int month) {
-      final firstOfNextMonth = month == 12
-          ? DateTime(year + 1, 1, 1)
-          : DateTime(year, month + 1, 1);
-      return firstOfNextMonth.subtract(const Duration(days: 1));
-    }
-
-    DateTime addMonths(DateTime date, int months) {
-      // DateTime handles month overflow, which keeps the math stable across years.
-      final targetMonth = DateTime(date.year, date.month + months, 1);
-      final lastDay = lastDayOfMonth(targetMonth.year, targetMonth.month).day;
-      final day = date.day > lastDay ? lastDay : date.day;
-      return DateTime(targetMonth.year, targetMonth.month, day);
-    }
-
-    DateTimeRange lastMonthRange() {
-      final lastMonth = addMonths(now, -1);
-      final startDate = DateTime(lastMonth.year, lastMonth.month, 1);
-      final endDate = lastDayOfMonth(lastMonth.year, lastMonth.month);
-      return DateTimeRange(start: startDate, end: endDate);
-    }
-
-    DateTimeRange lastQuarterRange() {
-      final lastMonth = addMonths(now, -1);
-      final startMonth = addMonths(
-        DateTime(lastMonth.year, lastMonth.month, 1),
-        -2,
-      );
-      final startDate = DateTime(startMonth.year, startMonth.month, 1);
-      final endDate = lastDayOfMonth(lastMonth.year, lastMonth.month);
-      return DateTimeRange(start: startDate, end: endDate);
-    }
-
-    DateTimeRange lastYearRange() {
-      final year = now.year - 1;
-      return DateTimeRange(
-        start: DateTime(year, 1, 1),
-        end: DateTime(year, 12, 31),
-      );
-    }
-
     await showModalBottomSheet<void>(
       context: context,
       isScrollControlled: true,
@@ -81,6 +33,12 @@ class TransactionFiltersRow extends StatelessWidget {
       builder: (context) {
         return StatefulBuilder(
           builder: (context, setState) {
+            final safeRange = TransactionDateRangePresets.normalize(start, end);
+            final lastMonthRange = TransactionDateRangePresets.lastMonth(now);
+            final lastQuarterRange = TransactionDateRangePresets.lastQuarter(
+              now,
+            );
+            final lastYearRange = TransactionDateRangePresets.lastYear(now);
             final startLabel = start == null
                 ? context.l10n.selectDate
                 : AppFormatters.shortDate(start!);
@@ -89,14 +47,14 @@ class TransactionFiltersRow extends StatelessWidget {
                 : AppFormatters.shortDate(end!);
 
             bool matchesRange(DateTimeRange r) {
-              final s = safeRange();
-              if (s == null) return false;
-              return s.start.year == r.start.year &&
-                  s.start.month == r.start.month &&
-                  s.start.day == r.start.day &&
-                  s.end.year == r.end.year &&
-                  s.end.month == r.end.month &&
-                  s.end.day == r.end.day;
+              if (safeRange == null) {
+                return false;
+              }
+              return TransactionDateRangePresets.sameDay(
+                    safeRange.start,
+                    r.start,
+                  ) &&
+                  TransactionDateRangePresets.sameDay(safeRange.end, r.end);
             }
 
             return Padding(
@@ -136,34 +94,31 @@ class TransactionFiltersRow extends StatelessWidget {
                     children: [
                       _RangeChip(
                         label: context.l10n.lastMonth,
-                        selected: matchesRange(lastMonthRange()),
+                        selected: matchesRange(lastMonthRange),
                         onTap: () {
-                          final r = lastMonthRange();
                           setState(() {
-                            start = r.start;
-                            end = r.end;
+                            start = lastMonthRange.start;
+                            end = lastMonthRange.end;
                           });
                         },
                       ),
                       _RangeChip(
                         label: context.l10n.lastQuarter,
-                        selected: matchesRange(lastQuarterRange()),
+                        selected: matchesRange(lastQuarterRange),
                         onTap: () {
-                          final r = lastQuarterRange();
                           setState(() {
-                            start = r.start;
-                            end = r.end;
+                            start = lastQuarterRange.start;
+                            end = lastQuarterRange.end;
                           });
                         },
                       ),
                       _RangeChip(
                         label: context.l10n.lastYear,
-                        selected: matchesRange(lastYearRange()),
+                        selected: matchesRange(lastYearRange),
                         onTap: () {
-                          final r = lastYearRange();
                           setState(() {
-                            start = r.start;
-                            end = r.end;
+                            start = lastYearRange.start;
+                            end = lastYearRange.end;
                           });
                         },
                       ),
@@ -218,9 +173,9 @@ class TransactionFiltersRow extends StatelessWidget {
                   SizedBox(
                     width: double.infinity,
                     child: FilledButton(
-                      onPressed: safeRange() != null
+                      onPressed: safeRange != null
                           ? () {
-                              onRangeChanged(safeRange());
+                              onRangeChanged(safeRange);
                               Navigator.of(context).pop();
                             }
                           : null,
@@ -234,14 +189,6 @@ class TransactionFiltersRow extends StatelessWidget {
         );
       },
     );
-  }
-
-  void _toggleFilter(TransactionFilter target) {
-    if (filter == target) {
-      onFilterChanged(TransactionFilter.all);
-    } else {
-      onFilterChanged(target);
-    }
   }
 
   @override
@@ -271,7 +218,7 @@ class TransactionFiltersRow extends StatelessWidget {
             label: context.l10n.expenses,
             selected: isExpense,
             selectedColor: selectedColor,
-            onTap: () => _toggleFilter(TransactionFilter.expense),
+            onTap: () => onFilterChanged(TransactionFilter.expense),
             onClear: isExpense
                 ? () => onFilterChanged(TransactionFilter.all)
                 : null,
@@ -282,7 +229,7 @@ class TransactionFiltersRow extends StatelessWidget {
             label: context.l10n.income,
             selected: isIncome,
             selectedColor: selectedColor,
-            onTap: () => _toggleFilter(TransactionFilter.income),
+            onTap: () => onFilterChanged(TransactionFilter.income),
             onClear: isIncome
                 ? () => onFilterChanged(TransactionFilter.all)
                 : null,

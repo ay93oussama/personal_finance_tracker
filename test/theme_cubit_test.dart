@@ -1,12 +1,15 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:tracker/core/constants/app_constants.dart';
 
 import 'package:tracker/presentation/states/cubits/theme/theme_cubit.dart';
 
 void main() {
   test('loads theme from shared preferences', () async {
-    SharedPreferences.setMockInitialValues({'theme_mode': 'dark'});
+    SharedPreferences.setMockInitialValues({
+      AppConstants.themeModePrefKey: AppConstants.themeModeDark,
+    });
     final prefs = await SharedPreferences.getInstance();
 
     final cubit = ThemeCubit(prefs);
@@ -22,6 +25,9 @@ void main() {
     await cubit.toggle();
 
     expect(cubit.state, ThemeMode.light);
-    expect(prefs.getString('theme_mode'), 'light');
+    expect(
+      prefs.getString(AppConstants.themeModePrefKey),
+      AppConstants.themeModeLight,
+    );
   });
 }

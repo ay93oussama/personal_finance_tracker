@@ -37,12 +37,10 @@ class TransactionsCubit extends Cubit<TransactionsState> {
         ),
       ),
       (items) {
-        final balance = _calculateBalance(items);
         emit(
           state.copyWith(
             status: TransactionsStatus.ready,
             transactions: items,
-            displayBalance: balance,
             errorMessage: null,
           ),
         );
@@ -88,13 +86,8 @@ class TransactionsCubit extends Cubit<TransactionsState> {
 
   Future<void> deleteTransaction(String id) async {
     final updated = state.transactions.where((t) => t.id != id).toList();
-    final balance = _calculateBalance(updated);
     emit(
-      state.copyWith(
-        status: TransactionsStatus.ready,
-        transactions: updated,
-        displayBalance: balance,
-      ),
+      state.copyWith(status: TransactionsStatus.ready, transactions: updated),
     );
     final result = await _deleteTransaction(DeleteTransactionParams(id));
     result.fold((failure) {
@@ -129,17 +122,13 @@ class TransactionsCubit extends Cubit<TransactionsState> {
     emit(state.copyWith(filter: filter));
   }
 
-  void setDateRange(DateTimeRange? range) {
-    emit(state.copyWith(dateRange: range, clearDateRange: range == null));
+  void toggleFilter(TransactionFilter target) {
+    final next = state.filter == target ? TransactionFilter.all : target;
+    emit(state.copyWith(filter: next));
   }
 
-  double _calculateBalance(List<Transaction> items) {
-    return items.fold<double>(0, (total, transaction) {
-      final signed = transaction.type == TransactionType.income
-          ? transaction.amount
-          : -transaction.amount;
-      return total + signed;
-    });
+  void setDateRange(DateTimeRange? range) {
+    emit(state.copyWith(dateRange: range, clearDateRange: range == null));
   }
 
   List<Transaction> _demoTransactions() {

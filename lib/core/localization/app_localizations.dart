@@ -1,11 +1,14 @@
 import 'package:flutter/material.dart';
+import 'package:tracker/core/localization/app_localizations_de.dart';
+import 'package:tracker/core/localization/app_localizations_en.dart';
+import 'package:tracker/core/localization/app_locales.dart';
 
 class AppLocalizations {
   AppLocalizations(this.locale);
 
   final Locale locale;
 
-  static const supportedLocales = [Locale('en'), Locale('de')];
+  static const supportedLocales = AppLocales.supported;
 
   static const LocalizationsDelegate<AppLocalizations> delegate =
       _AppLocalizationsDelegate();
@@ -20,105 +23,13 @@ class AppLocalizations {
   }
 
   static const Map<String, Map<String, String>> _values = {
-    'en': {
-      'financeTracker': 'Finance Tracker',
-      'addTransaction': 'Add transaction',
-      'addTransactionTitle': 'Add Transaction',
-      'editTransactionTitle': 'Edit Transaction',
-      'save': 'Save',
-      'delete': 'Delete',
-      'deleteTransactionTitle': 'Delete transaction?',
-      'deleteTransactionBody': 'This action cannot be undone.',
-      'cancel': 'Cancel',
-      'toggleTheme': 'Toggle theme',
-      'toggleLanguage': 'Switch language',
-      'demo': 'Demo',
-      'spendingByCategory': 'Spending by category',
-      'transactions': 'Transactions',
-      'noTransactionsYet': 'No transactions yet',
-      'addFirstTransaction': 'Add your first income or expense.',
-      'retry': 'Retry',
-      'somethingWentWrong': 'Something went wrong.',
-      'noExpensesYet': 'No expenses yet.',
-      'showMore': 'Show more',
-      'showLess': 'Show less',
-      'chartHint':
-          'Bars show each category as a share of total expenses for the selected date range.',
-      'allDates': 'All dates',
-      'expenses': 'Expenses',
-      'income': 'Income',
-      'selectDate': 'Select a date',
-      'selectDateRange': 'Select a date range',
-      'clear': 'Clear',
-      'lastMonth': 'Last month',
-      'lastQuarter': 'Last quarter',
-      'lastYear': 'Last year',
-      'start': 'Start',
-      'end': 'End',
-      'showActivities': 'Show activities',
-      'selectCategory': 'Select a category',
-      'searchCategories': 'Search categories',
-      'noMatchesFound': 'No matches found.',
-      'amount': 'Amount',
-      'category': 'Category',
-      'date': 'Date',
-      'notesOptional': 'Notes (optional)',
-      'expense': 'Expense',
-      'enterValidAmount': 'Enter a valid amount.',
-      'amountRequired': 'Amount is required.',
-      'categoryRequired': 'Category is required.',
-    },
-    'de': {
-      'financeTracker': 'Finanz-Tracker',
-      'addTransaction': 'Transaktion hinzufügen',
-      'addTransactionTitle': 'Transaktion hinzufügen',
-      'editTransactionTitle': 'Transaktion bearbeiten',
-      'save': 'Speichern',
-      'delete': 'Löschen',
-      'deleteTransactionTitle': 'Transaktion löschen?',
-      'deleteTransactionBody': 'Diese Aktion kann nicht rückgängig gemacht werden.',
-      'cancel': 'Abbrechen',
-      'toggleTheme': 'Design umschalten',
-      'toggleLanguage': 'Sprache wechseln',
-      'demo': 'Demo',
-      'spendingByCategory': 'Ausgaben nach Kategorie',
-      'transactions': 'Transaktionen',
-      'noTransactionsYet': 'Noch keine Transaktionen',
-      'addFirstTransaction': 'Füge deine erste Einnahme oder Ausgabe hinzu.',
-      'retry': 'Erneut versuchen',
-      'somethingWentWrong': 'Etwas ist schiefgelaufen.',
-      'noExpensesYet': 'Noch keine Ausgaben.',
-      'showMore': 'Mehr anzeigen',
-      'showLess': 'Weniger anzeigen',
-      'chartHint':
-          'Balken zeigen jede Kategorie als Anteil der Gesamtausgaben im gewählten Zeitraum.',
-      'allDates': 'Alle Daten',
-      'expenses': 'Ausgaben',
-      'income': 'Einnahmen',
-      'selectDate': 'Datum auswählen',
-      'selectDateRange': 'Datumsbereich auswählen',
-      'clear': 'Zurücksetzen',
-      'lastMonth': 'Letzter Monat',
-      'lastQuarter': 'Letztes Quartal',
-      'lastYear': 'Letztes Jahr',
-      'start': 'Start',
-      'end': 'Ende',
-      'showActivities': 'Aktivitäten anzeigen',
-      'selectCategory': 'Kategorie auswählen',
-      'searchCategories': 'Kategorien suchen',
-      'noMatchesFound': 'Keine Treffer gefunden.',
-      'amount': 'Betrag',
-      'category': 'Kategorie',
-      'date': 'Datum',
-      'notesOptional': 'Notizen (optional)',
-      'expense': 'Ausgabe',
-      'enterValidAmount': 'Bitte einen gültigen Betrag eingeben.',
-      'amountRequired': 'Betrag ist erforderlich.',
-      'categoryRequired': 'Kategorie ist erforderlich.',
-    },
+    AppLocales.fallbackLanguageCode: appLocalizationsEn,
+    AppLocales.secondaryLanguageCode: appLocalizationsDe,
   };
 
-  String _t(String key) => _values[locale.languageCode]?[key] ?? _values['en']![key]!;
+  String _t(String key) =>
+      _values[locale.languageCode]?[key] ??
+      _values[AppLocales.fallbackLanguageCode]![key]!;
 
   String get financeTracker => _t('financeTracker');
   String get addTransaction => _t('addTransaction');
@@ -134,6 +45,7 @@ class AppLocalizations {
   String get demo => _t('demo');
   String get spendingByCategory => _t('spendingByCategory');
   String get transactions => _t('transactions');
+  String get currentBalance => _t('currentBalance');
   String get noTransactionsYet => _t('noTransactionsYet');
   String get addFirstTransaction => _t('addFirstTransaction');
   String get retry => _t('retry');
@@ -172,10 +84,9 @@ class _AppLocalizationsDelegate
   const _AppLocalizationsDelegate();
 
   @override
-  bool isSupported(Locale locale) =>
-      AppLocalizations.supportedLocales.any(
-        (supported) => supported.languageCode == locale.languageCode,
-      );
+  bool isSupported(Locale locale) => AppLocalizations.supportedLocales.any(
+    (supported) => supported.languageCode == locale.languageCode,
+  );
 
   @override
   Future<AppLocalizations> load(Locale locale) async {

@@ -22,10 +22,15 @@ class HomePage extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: Text(context.l10n.financeTracker), actions: const [DemoButton(), LanguageButton(), ThemeButton()]),
+      appBar: AppBar(
+        title: Text(context.l10n.financeTracker),
+        actions: const [DemoButton(), LanguageButton(), ThemeButton()],
+      ),
       floatingActionButton: FloatingActionButton.extended(
         onPressed: () {
-          Navigator.of(context).push(MaterialPageRoute(builder: (_) => const AddEditTransactionPage()));
+          Navigator.of(context).push(
+            MaterialPageRoute(builder: (_) => const AddEditTransactionPage()),
+          );
         },
         icon: const Icon(Icons.add),
         label: Text(context.l10n.addTransaction),
@@ -33,7 +38,8 @@ class HomePage extends StatelessWidget {
       body: SafeArea(
         child: BlocBuilder<TransactionsCubit, TransactionsState>(
           builder: (context, state) {
-            if (state.status == TransactionsStatus.loading && state.transactions.isEmpty) {
+            if (state.status == TransactionsStatus.loading &&
+                state.transactions.isEmpty) {
               return const Center(child: CircularProgressIndicator());
             }
             if (state.status == TransactionsStatus.failure) {
@@ -51,19 +57,27 @@ class HomePage extends StatelessWidget {
                 physics: const AlwaysScrollableScrollPhysics(),
                 slivers: [
                   const AppSliverGap(12),
-                  AppSliverBox(child: BalanceCard(balance: state.displayBalance)),
+                  AppSliverBox(child: BalanceCard(balance: state.balance)),
                   const AppSliverGap(20),
-                  AppSliverBox(child: SectionHeader(title: context.l10n.spendingByCategory)),
+                  AppSliverBox(
+                    child: SectionHeader(
+                      title: context.l10n.spendingByCategory,
+                    ),
+                  ),
                   const AppSliverGap(8),
-                  AppSliverBox(child: CategorySpendingChart(categories: categoryTotals)),
+                  AppSliverBox(
+                    child: CategorySpendingChart(categories: categoryTotals),
+                  ),
                   const AppSliverGap(20),
-                  AppSliverBox(child: SectionHeader(title: context.l10n.transactions)),
+                  AppSliverBox(
+                    child: SectionHeader(title: context.l10n.transactions),
+                  ),
                   const AppSliverGap(8),
                   AppSliverBox(
                     child: TransactionFiltersRow(
                       filter: state.filter,
                       range: state.dateRange,
-                      onFilterChanged: cubit.setFilter,
+                      onFilterChanged: cubit.toggleFilter,
                       onRangeChanged: cubit.setDateRange,
                     ),
                   ),
@@ -73,9 +87,15 @@ class HomePage extends StatelessWidget {
                   else
                     GroupedTransactionList(
                       groups: groupedTransactions,
-                      onDelete: (transaction) => cubit.deleteTransaction(transaction.id),
+                      onDelete: (transaction) =>
+                          cubit.deleteTransaction(transaction.id),
                       onEdit: (transaction) {
-                        Navigator.of(context).push(MaterialPageRoute(builder: (_) => AddEditTransactionPage(initial: transaction)));
+                        Navigator.of(context).push(
+                          MaterialPageRoute(
+                            builder: (_) =>
+                                AddEditTransactionPage(initial: transaction),
+                          ),
+                        );
                       },
                     ),
                   const AppSliverGap(24),

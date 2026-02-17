@@ -13,7 +13,6 @@ class TransactionsState extends Equatable {
     required this.filter,
     required this.status,
     required this.dateRange,
-    required this.displayBalance,
     this.errorMessage,
   });
 
@@ -21,7 +20,6 @@ class TransactionsState extends Equatable {
   final TransactionFilter filter;
   final TransactionsStatus status;
   final DateTimeRange? dateRange;
-  final double displayBalance;
   final String? errorMessage;
 
   factory TransactionsState.initial() {
@@ -30,7 +28,6 @@ class TransactionsState extends Equatable {
       filter: TransactionFilter.all,
       status: TransactionsStatus.initial,
       dateRange: null,
-      displayBalance: 0,
     );
   }
 
@@ -40,7 +37,6 @@ class TransactionsState extends Equatable {
     TransactionsStatus? status,
     DateTimeRange? dateRange,
     bool clearDateRange = false,
-    double? displayBalance,
     String? errorMessage,
   }) {
     return TransactionsState(
@@ -48,19 +44,11 @@ class TransactionsState extends Equatable {
       filter: filter ?? this.filter,
       status: status ?? this.status,
       dateRange: clearDateRange ? null : dateRange ?? this.dateRange,
-      displayBalance: displayBalance ?? this.displayBalance,
       errorMessage: errorMessage,
     );
   }
 
-  double get balance {
-    return transactions.fold<double>(0, (total, transaction) {
-      final signed = transaction.type == TransactionType.income
-          ? transaction.amount
-          : -transaction.amount;
-      return total + signed;
-    });
-  }
+  double get balance => TransactionAggregations.netBalance(transactions);
 
   List<Transaction> get filteredTransactions {
     final inRange = _applyDateRange(transactions);
@@ -120,7 +108,6 @@ class TransactionsState extends Equatable {
     filter,
     status,
     dateRange,
-    displayBalance,
     errorMessage,
   ];
 }

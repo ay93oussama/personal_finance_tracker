@@ -17,6 +17,15 @@ class CategoryTotal {
 class TransactionAggregations {
   TransactionAggregations._();
 
+  static double netBalance(List<Transaction> transactions) {
+    return transactions.fold<double>(0, (total, transaction) {
+      final signedAmount = transaction.type == TransactionType.income
+          ? transaction.amount
+          : -transaction.amount;
+      return total + signedAmount;
+    });
+  }
+
   static List<TransactionGroup> groupByDate(List<Transaction> transactions) {
     final groups = <DateTime, List<Transaction>>{};
     for (final transaction in transactions) {

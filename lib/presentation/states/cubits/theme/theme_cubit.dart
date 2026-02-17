@@ -11,11 +11,11 @@ class ThemeCubit extends Cubit<ThemeMode> {
   static ThemeMode _loadTheme(SharedPreferences prefs) {
     final value = prefs.getString(AppConstants.themeModePrefKey);
     switch (value) {
-      case 'light':
+      case AppConstants.themeModeLight:
         return ThemeMode.light;
-      case 'dark':
+      case AppConstants.themeModeDark:
         return ThemeMode.dark;
-      case 'system':
+      case AppConstants.themeModeSystem:
         return ThemeMode.system;
       default:
         return ThemeMode.dark;
@@ -35,11 +35,11 @@ class ThemeCubit extends Cubit<ThemeMode> {
   String _serialize(ThemeMode mode) {
     switch (mode) {
       case ThemeMode.light:
-        return 'light';
+        return AppConstants.themeModeLight;
       case ThemeMode.dark:
-        return 'dark';
+        return AppConstants.themeModeDark;
       case ThemeMode.system:
-        return 'system';
+        return AppConstants.themeModeSystem;
     }
   }
 }

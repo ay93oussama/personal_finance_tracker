@@ -101,6 +101,17 @@ void main() {
     expect(cubit.state.filteredTransactions.isEmpty, true);
   });
 
+  test('toggleFilter applies and clears active filter', () async {
+    final repo = FakeTransactionRepository([]);
+    final cubit = TransactionsCubit(repo);
+
+    cubit.toggleFilter(TransactionFilter.expense);
+    expect(cubit.state.filter, TransactionFilter.expense);
+
+    cubit.toggleFilter(TransactionFilter.expense);
+    expect(cubit.state.filter, TransactionFilter.all);
+  });
+
   test('add, update, delete refreshes state', () async {
     final repo = FakeTransactionRepository([]);
     final cubit = TransactionsCubit(repo);

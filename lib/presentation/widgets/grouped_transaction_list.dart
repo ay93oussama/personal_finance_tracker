@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import 'package:tracker/core/helpers/app_formatters.dart';
+import 'package:tracker/core/theme/app_tokens.dart';
 import 'package:tracker/domain/entities/transaction.dart';
 import 'package:tracker/domain/usecases/transactions/transaction_aggregations.dart';
 import 'transaction_tile.dart';
@@ -44,7 +45,9 @@ class GroupedTransactionList extends StatelessWidget {
                 alignment: Alignment.centerRight,
                 padding: const EdgeInsets.only(right: 20),
                 decoration: BoxDecoration(
-                  color: Colors.red.withValues(alpha: 0.8),
+                  color: Theme.of(
+                    context,
+                  ).semanticColors.expense.withValues(alpha: 0.8),
                   borderRadius: BorderRadius.circular(16),
                 ),
                 child: const Icon(Icons.delete, color: Colors.white),

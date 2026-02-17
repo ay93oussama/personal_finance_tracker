@@ -1,11 +1,17 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:tracker/core/helpers/app_formatters.dart';
 import 'package:tracker/core/localization/app_localizations.dart';
 import 'package:tracker/core/services/id_service.dart';
 import 'package:tracker/domain/entities/transaction.dart';
-import 'package:tracker/domain/usecases/transactions/transaction_categories.dart';
+import 'package:tracker/presentation/states/cubits/transaction_form/transaction_form_cubit.dart';
+import 'package:tracker/presentation/states/cubits/transaction_form/transaction_form_state.dart';
 import 'package:tracker/presentation/states/cubits/transactions/transactions_cubit.dart';
+import 'package:tracker/presentation/widgets/balance_card.dart';
+import 'package:tracker/presentation/widgets/common/app_slivers.dart';
+import 'package:tracker/presentation/widgets/section_header.dart';
 
 class AddEditTransactionPage extends StatefulWidget {
   const AddEditTransactionPage({super.key, this.initial});
@@ -21,48 +27,63 @@ class _AddEditTransactionPageState extends State<AddEditTransactionPage> {
   final _amountController = TextEditingController();
   final _noteController = TextEditingController();
   final _categoryController = TextEditingController();
-
-  late TransactionType _type;
-  late String _category;
-  late DateTime _date;
+  late final TransactionFormCubit _formCubit;
+  StreamSubscription<String>? _categorySyncSubscription;
 
   @override
   void initState() {
     super.initState();
+    _formCubit = TransactionFormCubit(
+      idGenerator: IdService.nextId,
+      initial: widget.initial,
+    );
+
     final initial = widget.initial;
-    _type = initial?.type ?? TransactionType.expense;
-    final categories = TransactionCategories.forType(_type);
-    final initialCategory = initial?.category;
-    _category = initialCategory != null && categories.contains(initialCategory)
-        ? initialCategory
-        : TransactionCategories.defaultFor(_type);
-    _date = initial?.date ?? DateTime.now();
-    _categoryController.text = _category;
+    _categoryController.text = _formCubit.state.category;
+
     if (initial != null) {
       _amountController.text = initial.amount.toStringAsFixed(2);
       _noteController.text = initial.note ?? '';
     }
+
+    _categorySyncSubscription = _formCubit.stream
+        .map((state) => state.category)
+        .distinct()
+        .listen((category) {
+          if (_categoryController.text == category) {
+            return;
+          }
+          _categoryController.text = category;
+        });
+
+    _amountController.addListener(_onAmountChanged);
   }
 
   @override
   void dispose() {
+    _categorySyncSubscription?.cancel();
+    _amountController.removeListener(_onAmountChanged);
+    _formCubit.close();
     _amountController.dispose();
     _noteController.dispose();
     _categoryController.dispose();
     super.dispose();
   }
 
-  Future<void> _pickDate() async {
+  void _onAmountChanged() {
+    if (!mounted) return;
+    setState(() {});
+  }
+
+  Future<void> _pickDate(TransactionFormState formState) async {
     final picked = await showDatePicker(
       context: context,
-      initialDate: _date,
+      initialDate: formState.date,
       firstDate: DateTime(2015),
       lastDate: DateTime(DateTime.now().year + 5),
     );
     if (picked != null) {
-      setState(() {
-        _date = picked;
-      });
+      _formCubit.setDate(picked);
     }
   }
 
@@ -70,35 +91,131 @@ class _AddEditTransactionPageState extends State<AddEditTransactionPage> {
     if (!_formKey.currentState!.validate()) {
       return;
     }
-    final amount = double.tryParse(_amountController.text.replaceAll(',', '.'));
-    if (amount == null || amount <= 0) {
+    final transaction = _formCubit.buildTransaction(
+      amountInput: _amountController.text,
+      noteInput: _noteController.text,
+    );
+
+    if (transaction == null) {
       ScaffoldMessenger.of(
         context,
       ).showSnackBar(SnackBar(content: Text(context.l10n.enterValidAmount)));
       return;
     }
 
-    final transaction = Transaction(
-      id: widget.initial?.id ?? IdService.nextId(),
-      type: _type,
-      amount: amount,
-      title: _category,
-      category: _category,
-      date: _date,
-      note: _noteController.text.trim().isEmpty
-          ? null
-          : _noteController.text.trim(),
-    );
+    final transactionsCubit = context.read<TransactionsCubit>();
+    await (_formCubit.state.isEditing
+        ? transactionsCubit.updateTransaction(transaction)
+        : transactionsCubit.addTransaction(transaction));
 
-    final cubit = context.read<TransactionsCubit>();
-    await (widget.initial == null
-        ? cubit.addTransaction(transaction)
-        : cubit.updateTransaction(transaction));
     if (mounted) Navigator.of(context).pop();
   }
 
+
+  Widget _surfaceCard({required BuildContext context, required Widget child}) {
+    final colorScheme = Theme.of(context).colorScheme;
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        borderRadius: BorderRadius.circular(16),
+        color: colorScheme.surfaceContainerLow,
+        border: Border.all(color: colorScheme.surfaceContainerHigh),
+      ),
+      child: child,
+    );
+  }
+
+  Widget _detailsCard(BuildContext context, TransactionFormState formState) {
+    return _surfaceCard(
+      context: context,
+      child: Column(
+        children: [
+          SegmentedButton<TransactionType>(
+            segments: [
+              ButtonSegment(
+                value: TransactionType.expense,
+                label: Text(context.l10n.expense),
+                icon: const Icon(Icons.remove_circle_outline),
+              ),
+              ButtonSegment(
+                value: TransactionType.income,
+                label: Text(context.l10n.income),
+                icon: const Icon(Icons.add_circle_outline),
+              ),
+            ],
+            selected: {formState.type},
+            onSelectionChanged: (selection) =>
+                _formCubit.setType(selection.first),
+          ),
+          const SizedBox(height: 16),
+          TextFormField(
+            controller: _categoryController,
+            readOnly: true,
+            decoration: InputDecoration(
+              labelText: context.l10n.category,
+              border: const OutlineInputBorder(),
+              suffixIcon: const Icon(Icons.expand_more),
+            ),
+            onTap: _openCategoryPicker,
+            validator: (value) {
+              if (value == null || value.trim().isEmpty) {
+                return context.l10n.categoryRequired;
+              }
+              return null;
+            },
+          ),
+          const SizedBox(height: 16),
+          TextFormField(
+            controller: _amountController,
+            keyboardType: const TextInputType.numberWithOptions(decimal: true),
+            decoration: InputDecoration(
+
+              labelText: context.l10n.amount,
+              prefixText: '€ ',
+              border: const OutlineInputBorder(),
+            ),
+            validator: (value) {
+              if (value == null || value.trim().isEmpty) {
+                return context.l10n.amountRequired;
+              }
+              final amount = _formCubit.parseAmount(value);
+              if (amount == null || amount <= 0) {
+                return context.l10n.enterValidAmount;
+              }
+              return null;
+            },
+          ),
+          const SizedBox(height: 16),
+          ListTile(
+            contentPadding: EdgeInsets.zero,
+            title: Text(context.l10n.date),
+            subtitle: Text(AppFormatters.shortDate(formState.date)),
+            trailing: const Icon(Icons.calendar_month),
+            onTap: () => _pickDate(formState),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _notesCard(BuildContext context) {
+    return _surfaceCard(
+      context: context,
+      child: TextFormField(
+        controller: _noteController,
+        maxLines: 3,
+        decoration: InputDecoration(
+          labelText: context.l10n.notesOptional,
+          border: const OutlineInputBorder(),
+        ),
+      ),
+    );
+  }
+
   Future<void> _openCategoryPicker() async {
-    final categories = TransactionCategories.forType(_type);
+    _formCubit.clearCategoryQuery();
+
     final selected = await showModalBottomSheet<String>(
       context: context,
       isScrollControlled: true,
@@ -107,84 +224,15 @@ class _AddEditTransactionPageState extends State<AddEditTransactionPage> {
         borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
       ),
       builder: (context) {
-        final height = MediaQuery.of(context).size.height * 0.85;
-        String query = '';
-        return StatefulBuilder(
-          builder: (context, setState) {
-            final filtered = categories
-                .where(
-                  (category) =>
-                      category.toLowerCase().contains(query.toLowerCase()),
-                )
-                .toList();
-
-            return SizedBox(
-              height: height,
-              child: Padding(
-                padding: EdgeInsets.fromLTRB(
-                  16,
-                  8,
-                  16,
-                  MediaQuery.of(context).viewInsets.bottom + 16,
-                ),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      context.l10n.selectCategory,
-                      style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                        fontWeight: FontWeight.w700,
-                      ),
-                    ),
-                    const SizedBox(height: 12),
-                    TextField(
-                      autofocus: true,
-                      decoration: InputDecoration(
-                        prefixIcon: const Icon(Icons.search),
-                        hintText: context.l10n.searchCategories,
-                      ),
-                      onChanged: (value) =>
-                          setState(() => query = value.trim()),
-                    ),
-                    const SizedBox(height: 12),
-                    if (filtered.isEmpty)
-                      Text(
-                        context.l10n.noMatchesFound,
-                        style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                          color: Theme.of(context).colorScheme.onSurfaceVariant,
-                        ),
-                      )
-                    else
-                      Expanded(
-                        child: ListView.separated(
-                          itemCount: filtered.length,
-                          separatorBuilder: (_, __) => const Divider(height: 1),
-                          itemBuilder: (context, index) {
-                            final category = filtered[index];
-                            return ListTile(
-                              title: Text(category),
-                              trailing: category == _category
-                                  ? const Icon(Icons.check)
-                                  : null,
-                              onTap: () => Navigator.of(context).pop(category),
-                            );
-                          },
-                        ),
-                      ),
-                  ],
-                ),
-              ),
-            );
-          },
+        return BlocProvider.value(
+          value: _formCubit,
+          child: const _CategoryPickerSheet(),
         );
       },
     );
 
     if (selected != null) {
-      setState(() {
-        _category = selected;
-        _categoryController.text = selected;
-      });
+      _formCubit.setCategory(selected);
     }
   }
 
@@ -219,120 +267,126 @@ class _AddEditTransactionPageState extends State<AddEditTransactionPage> {
 
   @override
   Widget build(BuildContext context) {
-    final isEditing = widget.initial != null;
-
-    return Scaffold(
-      appBar: AppBar(
-        title: Text(
-          isEditing
-              ? context.l10n.editTransactionTitle
-              : context.l10n.addTransactionTitle,
-        ),
-        actions: [
-          if (isEditing)
-            IconButton(
-              tooltip: context.l10n.delete,
-              onPressed: _confirmDelete,
-              icon: const Icon(Icons.delete_outline),
+    return BlocProvider.value(
+      value: _formCubit,
+      child: BlocBuilder<TransactionFormCubit, TransactionFormState>(
+        builder: (context, formState) {
+          return Scaffold(
+            appBar: AppBar(
+              title: Text(
+                formState.isEditing
+                    ? context.l10n.editTransactionTitle
+                    : context.l10n.addTransactionTitle,
+              ),
+              actions: [
+                if (formState.isEditing)
+                  IconButton(
+                    tooltip: context.l10n.delete,
+                    onPressed: _confirmDelete,
+                    icon: const Icon(Icons.delete_outline),
+                  ),
+                TextButton(onPressed: _save, child: Text(context.l10n.save)),
+              ],
             ),
-          TextButton(onPressed: _save, child: Text(context.l10n.save)),
-        ],
+            body: SafeArea(
+              child: Form(
+                key: _formKey,
+                child: CustomScrollView(
+                  keyboardDismissBehavior:
+                      ScrollViewKeyboardDismissBehavior.onDrag,
+                  slivers: [
+                    const AppSliverGap(12),
+                    AppSliverBox(
+                      child: SectionHeader(title: context.l10n.transactions),
+                    ),
+                    const AppSliverGap(8),
+                    AppSliverBox(child: _detailsCard(context, formState)),
+                    const AppSliverGap(20),
+                    AppSliverBox(
+                      child: SectionHeader(title: context.l10n.notesOptional),
+                    ),
+                    const AppSliverGap(8),
+                    AppSliverBox(child: _notesCard(context)),
+                    const AppSliverGap(24),
+                  ],
+                ),
+              ),
+            ),
+          );
+        },
       ),
-      body: SafeArea(
-        child: Form(
-          key: _formKey,
-          child: ListView(
-            padding: const EdgeInsets.all(16),
-            children: [
-              SegmentedButton<TransactionType>(
-                segments: [
-                  ButtonSegment(
-                    value: TransactionType.expense,
-                    label: Text(context.l10n.expense),
-                    icon: const Icon(Icons.remove_circle_outline),
+    );
+  }
+}
+
+class _CategoryPickerSheet extends StatelessWidget {
+  const _CategoryPickerSheet();
+
+  @override
+  Widget build(BuildContext context) {
+    return BlocBuilder<TransactionFormCubit, TransactionFormState>(
+      builder: (context, state) {
+        final cubit = context.read<TransactionFormCubit>();
+        final height = MediaQuery.of(context).size.height * 0.85;
+        final filtered = state.filteredCategories;
+
+        return SizedBox(
+          height: height,
+          child: Padding(
+            padding: EdgeInsets.fromLTRB(
+              16,
+              8,
+              16,
+              MediaQuery.of(context).viewInsets.bottom + 16,
+            ),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  context.l10n.selectCategory,
+                  style: Theme.of(
+                    context,
+                  ).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.w700),
+                ),
+                const SizedBox(height: 12),
+                TextField(
+                  autofocus: true,
+                  decoration: InputDecoration(
+                    prefixIcon: const Icon(Icons.search),
+                    hintText: context.l10n.searchCategories,
                   ),
-                  ButtonSegment(
-                    value: TransactionType.income,
-                    label: Text(context.l10n.income),
-                    icon: const Icon(Icons.add_circle_outline),
+                  onChanged: cubit.setCategoryQuery,
+                ),
+                const SizedBox(height: 12),
+                if (filtered.isEmpty)
+                  Text(
+                    context.l10n.noMatchesFound,
+                    style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                      color: Theme.of(context).colorScheme.onSurfaceVariant,
+                    ),
+                  )
+                else
+                  Expanded(
+                    child: ListView.separated(
+                      itemCount: filtered.length,
+                      separatorBuilder: (_, __) => const Divider(height: 1),
+                      itemBuilder: (context, index) {
+                        final category = filtered[index];
+                        return ListTile(
+                          title: Text(category),
+                          trailing: category == state.category
+                              ? const Icon(Icons.check)
+                              : null,
+                          onTap: () => Navigator.of(context).pop(category),
+                        );
+                      },
+                    ),
                   ),
-                ],
-                selected: {_type},
-                onSelectionChanged: (selection) {
-                  final nextType = selection.first;
-                  final categories = TransactionCategories.forType(nextType);
-                  final nextCategory = categories.contains(_category)
-                      ? _category
-                      : TransactionCategories.defaultFor(nextType);
-                  setState(() {
-                    _type = nextType;
-                    _category = nextCategory;
-                    _categoryController.text = nextCategory;
-                  });
-                },
-              ),
-              const SizedBox(height: 16),
-              TextFormField(
-                controller: _categoryController,
-                readOnly: true,
-                decoration: InputDecoration(
-                  labelText: context.l10n.category,
-                  border: const OutlineInputBorder(),
-                  suffixIcon: const Icon(Icons.expand_more),
-                ),
-                onTap: _openCategoryPicker,
-                validator: (value) {
-                  if (value == null || value.trim().isEmpty) {
-                    return context.l10n.categoryRequired;
-                  }
-                  return null;
-                },
-              ),
-              const SizedBox(height: 16),
-              TextFormField(
-                controller: _amountController,
-                keyboardType: const TextInputType.numberWithOptions(
-                  decimal: true,
-                ),
-                decoration: InputDecoration(
-                  labelText: context.l10n.amount,
-                  prefixText: '€ ',
-                  border: const OutlineInputBorder(),
-                ),
-                validator: (value) {
-                  if (value == null || value.trim().isEmpty) {
-                    return context.l10n.amountRequired;
-                  }
-                  final amount = double.tryParse(
-                    value.trim().replaceAll(',', '.'),
-                  );
-                  if (amount == null || amount <= 0) {
-                    return context.l10n.enterValidAmount;
-                  }
-                  return null;
-                },
-              ),
-              const SizedBox(height: 16),
-              ListTile(
-                contentPadding: EdgeInsets.zero,
-                title: Text(context.l10n.date),
-                subtitle: Text(AppFormatters.shortDate(_date)),
-                trailing: const Icon(Icons.calendar_month),
-                onTap: _pickDate,
-              ),
-              const SizedBox(height: 8),
-              TextFormField(
-                controller: _noteController,
-                maxLines: 3,
-                decoration: InputDecoration(
-                  labelText: context.l10n.notesOptional,
-                  border: const OutlineInputBorder(),
-                ),
-              ),
-            ],
+              ],
+            ),
           ),
-        ),
-      ),
+        );
+      },
     );
   }
 }

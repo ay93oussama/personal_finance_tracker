@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:tracker/core/theme/app_tokens.dart';
 
 class AppTheme {
   AppTheme._();
@@ -14,6 +15,9 @@ class AppTheme {
     );
 
     return base.copyWith(
+      extensions: [
+        AppSemanticColors(income: Colors.green, expense: Colors.red),
+      ],
       scaffoldBackgroundColor: base.colorScheme.surface,
       appBarTheme: AppBarTheme(
         backgroundColor: base.colorScheme.surface,
